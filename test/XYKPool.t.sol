@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "script/deploy.educhain.sol";
 import "script/Deploy.generic.s.sol";
 import "contracts/MockERC20.sol";
 import "contracts/pools/constant-product/ConstantProductPool.sol";
@@ -10,6 +11,8 @@ import "contracts/pools/constant-product/ConstantProductLibrary.sol";
 import "openzeppelin/token/ERC20/ERC20.sol";
 import "openzeppelin/utils/math/SignedMath.sol";
 import "forge-std/console.sol";
+import "contracts/interfaces/IVC.sol";
+import "./Common.sol";
 
 contract MockVC is IVC, ERC20 {
     constructor() ERC20("lol", "lol") {}
@@ -21,22 +24,31 @@ contract MockVC is IVC, ERC20 {
         return 1e18 * 100;
     }
 
-    function emissionRate() external view override returns (uint256) {return 0;}
-    function emissionStarted() external view returns (bool) {return true;}
+    function emissionRate() external view override returns (uint256) {
+        return 0;
+    }
+
+    function emissionStarted() external view returns (bool) {
+        return true;
+    }
 }
 
 contract TestFacet is VaultStorage, IFacet {
     address immutable thisImplementation;
+
     constructor() {
         thisImplementation = address(this);
     }
+
     function initializeFacet() external {
         _setFunction(TestFacet.setBalance.selector, thisImplementation);
     }
+
     function setBalance(address pool, Token token, uint128 balance) external {
         _poolBalances()[IPool(pool)][token] = PoolBalance.wrap(bytes32(uint256(balance)));
     }
 }
+
 contract XYKPoolTest is Test {
     using TokenLib for Token;
 
@@ -54,7 +66,6 @@ contract XYKPoolTest is Test {
     uint256 i1;
     uint256 ilp;
 
-
     Deployer deployer;
     Placeholder placeholder_;
     IVault vault;
@@ -62,14 +73,12 @@ contract XYKPoolTest is Test {
     ConstantProductPoolFactory cpf;
     SimpleAuthorizer auth;
     AdminFacet adminFacet;
+
     function setUp() public {
         deployer = new Deployer();
         placeholder_ = new Placeholder();
         auth = new SimpleAuthorizer();
-        adminFacet = new AdminFacet(
-            auth,
-            address(this)
-        );
+        adminFacet = new AdminFacet(auth, address(this));
         vault = IVault(adminFacet.deploy(""));
         IVC vc = new MockVC();
         vault.admin_addFacet(new SwapFacet(vc, new WETH9(), NATIVE_TOKEN));
@@ -134,6 +143,7 @@ contract XYKPoolTest is Test {
     function invariant(uint256 a, uint256 b) internal pure returns (uint256) {
         return Math.sqrt((a + 1) * (b + 1));
     }
+
     function sb(Token t, uint128 b) internal {
         TestFacet(address(vault)).setBalance(address(pool2), t, b);
     }
@@ -154,13 +164,13 @@ contract XYKPoolTest is Test {
         vm.assume(int256(uint256(bb)) + int256(q) >= 0);
         sb(usdcT, ba);
         sb(btcT, bb);
-        
+
         uint256 iusdc = 0;
         uint256 ibtc = 1;
 
         if (i1 < i0) {
             iusdc = 1;
-            ibtc =0;
+            ibtc = 0;
         }
 
         Token[] memory t = new Token[](2);
@@ -172,12 +182,14 @@ contract XYKPoolTest is Test {
         r[ibtc] = q;
 
         vm.prank(address(vault));
-        (,int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
+        (, int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
         int256 i0 = invariant(int256(uint256(ba)), int256(uint256(bb)));
         int256 i1 = invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb)) + int256(rb[ibtc]));
         require(i1 >= i0);
     }
-    event Int(int256 a); 
+
+    event Int(int256 a);
+
     function testFuzz_s1(uint120 ba, uint120 bb, int120 q) public {
         vm.assume(int256(uint256(ba)) + int256(q) >= 0);
         sb(usdcT, ba);
@@ -199,16 +211,15 @@ contract XYKPoolTest is Test {
         r[iusdc] = q;
         r[ipool] = type(int128).max;
 
-
-
         vm.prank(address(vault));
-        (,int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
+        (, int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
         int256 i0 = invariant(int256(uint256(ba)), int256(uint256(bb)));
         int256 i1 = invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb))) + int256(rb[ipool]);
         emit Int(i0);
         emit Int(i1);
         require(i1 >= i0);
     }
+
     function testFuzz_s2(uint120 ba, uint120 bb, int56 q) public {
         vm.assume(int256(invariant(ba, bb)) - int256(q) >= 1);
         sb(usdcT, ba);
@@ -230,16 +241,15 @@ contract XYKPoolTest is Test {
         r[ipool] = q;
         r[iusdc] = type(int128).max;
 
-
-
         vm.prank(address(vault));
-        (,int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
+        (, int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
         int256 i0 = invariant(int256(uint256(ba)), int256(uint256(bb)));
         int256 i1 = invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb))) + int256(rb[ipool]);
         emit Int(i0);
         emit Int(i1);
         require(i1 >= i0);
     }
+
     function testFuzz_s3(uint120 ba, uint120 bb, int56 q) public {
         vm.assume(int256(invariant(ba, bb)) - int256(q) >= 1);
         sb(usdcT, ba);
@@ -260,13 +270,15 @@ contract XYKPoolTest is Test {
         r[ibtc] = type(int128).max;
 
         vm.prank(address(vault));
-        (,int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
+        (, int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
         int256 i0 = invariant(int256(uint256(ba)), int256(uint256(bb)));
-        int256 i1 = invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb)) + rb[ibtc]) + int256(rb[ipool]);
+        int256 i1 =
+            invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb)) + rb[ibtc]) + int256(rb[ipool]);
         emit Int(i0);
         emit Int(i1);
         require(i1 >= i0);
     }
+
     function testFuzz_s4(uint120 ba, uint120 bb, int56 q, int120 p) public {
         vm.assume(int256(invariant(ba, bb)) - int256(q) >= 1);
         vm.assume(int256(uint256(ba)) + int256(p) >= 0);
@@ -288,9 +300,10 @@ contract XYKPoolTest is Test {
         r[ibtc] = type(int128).max;
 
         vm.prank(address(vault));
-        (,int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
+        (, int128[] memory rb) = pool2.velocore__execute(address(this), t, r, "");
         int256 i0 = invariant(int256(uint256(ba)), int256(uint256(bb)));
-        int256 i1 = invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb)) + rb[ibtc]) + int256(rb[ipool]);
+        int256 i1 =
+            invariant(int256(uint256(ba)) + int256(rb[iusdc]), int256(uint256(bb)) + rb[ibtc]) + int256(rb[ipool]);
         emit Int(i0);
         emit Int(i1);
         require(i1 >= i0);

@@ -6,8 +6,8 @@ import "openzeppelin/proxy/ERC1967/ERC1967Upgrade.sol";
 import "contracts/AdminFacet.sol";
 import "contracts/SwapFacet.sol";
 import "contracts/SwapAuxillaryFacet.sol";
-import "contracts/pools/vc/BLADE.sol";
-import "contracts/pools/vc/veBLADE.sol";
+import "contracts/pools/vc/SAIL.sol";
+import "contracts/pools/vc/veSAIL.sol";
 import "contracts/pools/converter/WETHConverter.sol";
 import "contracts/pools/wombat/WombatPool.sol";
 import "contracts/MockERC20.sol";
@@ -15,7 +15,6 @@ import "contracts/lens/Lens.sol";
 import "contracts/NFTHolderFacet.sol";
 import "contracts/InspectorFacet.sol";
 import "contracts/SwapHelperFacet.sol";
-import "contracts/BlastFacet.sol";
 import "contracts/SwapHelperFacet2.sol";
 import "contracts/lens/VelocoreLens.sol";
 import "contracts/pools/xyk/XYKPoolFactory.sol";
@@ -36,14 +35,20 @@ contract Placeholder is ERC1967Upgrade {
         ERC1967Upgrade._upgradeTo(newImplementation);
     }
 
-    function upgradeToAndCall(address newImplementation, bytes memory data) external {
+    function upgradeToAndCall(
+        address newImplementation,
+        bytes memory data
+    ) external {
         require(msg.sender == admin, "not admin");
         ERC1967Upgrade._upgradeToAndCall(newImplementation, data, true);
     }
 }
 
 contract Deployer {
-    function deployAndCall(bytes memory bytecode, bytes memory cd) external returns (address) {
+    function deployAndCall(
+        bytes memory bytecode,
+        bytes memory cd
+    ) external returns (address) {
         address deployed;
         bool success;
         assembly ("memory-safe") {
@@ -59,8 +64,8 @@ contract DeployScript is Script {
     Deployer public deployer;
     Placeholder public placeholder_;
     IVault public vault;
-    Blade public vc;
-    VeBlade public veVC;
+    Sail public vc;
+    VeSail public veVC;
     MockERC20 public oldVC;
     WombatPool public wombat;
     XYKPoolFactory public cpf;
@@ -73,7 +78,6 @@ contract DeployScript is Script {
     MockERC20 public crvUSD;
     MockERC20 public USDB;
 
-
     function setUp() public {}
 
     function run() public {
@@ -81,21 +85,23 @@ contract DeployScript is Script {
         deployer = new Deployer();
         placeholder_ = new Placeholder();
         auth = new SimpleAuthorizer();
-        adminFacet = new AdminFacet(
-            auth,
-            tx.origin
-        );
+        adminFacet = new AdminFacet(auth, tx.origin);
         vault = IVault(adminFacet.deploy(vm.getCode("Diamond.yul:Diamond")));
-        vc = Blade(placeholder());
-        veVC = VeBlade(placeholder());
+        vc = Sail(placeholder());
+        veVC = VeSail(placeholder());
         lbf = new LinearBribeFactory(vault);
-        address weth = address(BLAST_WETH);
+        address weth = address(WETH_ADDRESS);
         wethConverter = new WETHConverter(vault, IWETH(weth));
         lbf.setFeeToken(toToken(veVC));
         lbf.setFeeAmount(1000e18);
         lbf.setTreasury(tx.origin);
         SimpleAuthorizer(address(auth)).grantRole(
-            keccak256(abi.encodePacked(bytes32(uint256(uint160(address(vault)))), IVault.attachBribe.selector)),
+            keccak256(
+                abi.encodePacked(
+                    bytes32(uint256(uint160(address(vault)))),
+                    IVault.attachBribe.selector
+                )
+            ),
             address(lbf)
         );
 
@@ -121,27 +127,21 @@ contract DeployScript is Script {
         vault.admin_addFacet(new SwapAuxillaryFacet(vc, toToken(veVC)));
         vault.admin_addFacet(new NFTHolderFacet());
         vault.admin_addFacet(new InspectorFacet());
-        try vault.admin_addFacet(new BlastFacet()) {} catch(bytes memory) {}
         vault.admin_addFacet(new SwapHelperFacet(address(vc), cpf, spf));
         vault.admin_addFacet(new SwapHelperFacet2(address(vc), cpf, spf));
 
         Placeholder(address(vc)).upgradeToAndCall(
-            address(
-                new Blade(
-                    address(vc),
-                    vault,
-                    address(veVC)
-                )
-            ),
-            abi.encodeWithSelector(Blade.initialize.selector)
+            address(new Sail(address(vc), vault, address(veVC))),
+            abi.encodeWithSelector(Sail.initialize.selector)
         );
 
         Placeholder(address(veVC)).upgradeToAndCall(
-            address(new VeBlade(address(veVC), vault, vc)), abi.encodeWithSelector(VeBlade.initialize.selector)
+            address(new VeSail(address(veVC), vault, vc)),
+            abi.encodeWithSelector(VeSail.initialize.selector)
         );
 
         //cpf.deploy(NATIVE_TOKEN, toToken(vc));
-        cpf.deploy(NATIVE_TOKEN, toToken(BLAST_USDB));
+        // cpf.deploy(NATIVE_TOKEN, toToken(BLAST_USDB));
         //vault.execute1(address(vc), 0, address(vc), 0, 0, "");
         /*
         SwapHelperFacet2(address(vault)).addLiquidity{value: 1e18}(address(0), address(vc), false, 1e18, 10000e18, 0, 0, tx.origin, type(uint256).max); 
@@ -164,6 +164,10 @@ contract DeployScript is Script {
     }
 
     function placeholder() internal returns (address) {
-        return deployer.deployAndCall(vm.getCode("DumbProxy.yul:DumbProxy"), abi.encode(placeholder_));
+        return
+            deployer.deployAndCall(
+                vm.getCode("DumbProxy.yul:DumbProxy"),
+                abi.encode(placeholder_)
+            );
     }
 }

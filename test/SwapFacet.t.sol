@@ -3,8 +3,10 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "contracts/SwapFacet.sol";
+import "script/deploy.educhain.sol";
 import "contracts/interfaces/IPool.sol";
 import "openzeppelin/token/ERC20/ERC20.sol";
+import "./Common.sol";
 
 contract SwapFacetHarness is SwapFacet {
     using PoolBalanceLib for PoolBalance;
@@ -20,59 +22,6 @@ contract SwapFacetHarness is SwapFacet {
     }
 }
 
-contract WETH9 is IWETH {
-    string public name = "Wrapped Ether";
-    string public symbol = "WETH";
-    uint8 public decimals = 18;
-
-    event Deposit(address indexed dst, uint256 wad);
-    event Withdrawal(address indexed src, uint256 wad);
-
-    mapping(address => uint256) public balanceOf;
-    mapping(address => mapping(address => uint256)) public allowance;
-
-    function deposit() public payable {
-        balanceOf[msg.sender] += msg.value;
-        emit Deposit(msg.sender, msg.value);
-    }
-
-    function withdraw(uint256 wad) public {
-        require(balanceOf[msg.sender] >= wad);
-        balanceOf[msg.sender] -= wad;
-        (bool success,) = msg.sender.call{value: wad}("");
-        require(success);
-        emit Withdrawal(msg.sender, wad);
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return address(this).balance;
-    }
-
-    function approve(address guy, uint256 wad) public returns (bool) {
-        allowance[msg.sender][guy] = wad;
-        return true;
-    }
-
-    function transfer(address dst, uint256 wad) public returns (bool) {
-        return transferFrom(msg.sender, dst, wad);
-    }
-
-    function transferFrom(address src, address dst, uint256 wad) public returns (bool) {
-        require(balanceOf[src] >= wad);
-
-        if (src != msg.sender && allowance[src][msg.sender] != type(uint256).max) {
-            require(allowance[src][msg.sender] >= wad);
-            allowance[src][msg.sender] -= wad;
-        }
-
-        balanceOf[src] -= wad;
-        balanceOf[dst] += wad;
-
-
-        return true;
-    }
-}
-
 contract MockVC is IVC, ERC20 {
     constructor() ERC20("lol", "lol") {}
 
@@ -84,7 +33,10 @@ contract MockVC is IVC, ERC20 {
     }
 
     function emissionRate() external view override returns (uint256) {}
-    function emissionStarted() external view returns (bool) {return true;}
+
+    function emissionStarted() external view returns (bool) {
+        return true;
+    }
 }
 
 contract MockVeVC is ERC20 {

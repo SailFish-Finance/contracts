@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
+import "script/deploy.educhain.sol";
 import "script/Deploy.generic.s.sol";
 import "contracts/MockERC20.sol";
 import "contracts/pools/constant-product/ConstantProductPool.sol";
@@ -10,6 +11,8 @@ import "contracts/pools/constant-product/ConstantProductLibrary.sol";
 import "openzeppelin/token/ERC20/ERC20.sol";
 import "openzeppelin/utils/math/SignedMath.sol";
 import "forge-std/console.sol";
+import "contracts/interfaces/IVC.sol";
+import "./Common.sol";
 
 contract MockVC is IVC, ERC20 {
     constructor() ERC20("lol", "lol") {}
@@ -37,6 +40,7 @@ contract TestFacet is VaultStorage, IFacet {
         _poolBalances()[IPool(pool)][token] = PoolBalance.wrap(bytes32(uint256(balance)));
     }
 }
+
 contract StableSwapPoolTest is Test {
     using TokenLib for Token;
     using SafeCast for uint256;
