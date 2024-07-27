@@ -6,7 +6,7 @@ import "openzeppelin/token/ERC1155/IERC1155.sol";
 import "openzeppelin/token/ERC1155/extensions/ERC1155Supply.sol";
 import "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 import "openzeppelin/token/ERC721/extensions/IERC721Metadata.sol";
-import "contracts/blast/IERC20Rebasing.sol";
+import "openzeppelin/token/ERC20/IERC20.sol";
 
 // a library for abstracting tokens
 // provides a common interface for ERC20, ERC1155, and ERC721 tokens.
@@ -17,7 +17,7 @@ bytes32 constant ID_MASK = 0x00FFFFFFFFFFFFFFFFFFFFFF000000000000000000000000000
 uint256 constant ID_SHIFT = 160;
 bytes32 constant TOKENSPEC_MASK = 0xFF00000000000000000000000000000000000000000000000000000000000000;
 
-string constant NATIVE_TOKEN_SYMBOL = "ETH";
+string constant NATIVE_TOKEN_SYMBOL = "EDU";
 
 type Token is bytes32;
 
@@ -29,7 +29,9 @@ using {Token_lt as <} for Token global;
 using {Token_lte as <=} for Token global;
 using {Token_ne as !=} for Token global;
 
-Token constant NATIVE_TOKEN = Token.wrap(bytes32(0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE) & TOKEN_MASK);
+Token constant NATIVE_TOKEN =
+    Token.wrap(bytes32(0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE) & TOKEN_MASK);
+//@Todo change this to the correct address for WEDU
 address constant WETH_ADDRESS = 0x4300000000000000000000000000000000000004;
 
 function TokenSpec_equals(TokenSpecType a, TokenSpecType b) pure returns (bool) {
@@ -128,7 +130,7 @@ library TokenLib {
     }
 
     function totalSupply(Token tok) internal view returns (uint256) {
-        require (tok != NATIVE_TOKEN);
+        require(tok != NATIVE_TOKEN);
         if (tok.spec() == TokenSpec.ERC20) {
             require(tok.id() == 0);
             return tok.toIERC20().totalSupply(); // ERC721 balanceOf() has the same signature
@@ -151,13 +153,13 @@ library TokenLib {
             return "";
         } else if (tok.spec() == TokenSpec.ERC721) {
             return tok.toIERC721().symbol();
-        } 
+        }
     }
 
     function decimals(Token tok) internal view returns (uint8) {
         if (tok == NATIVE_TOKEN) {
             return 18;
-        }           else if (tok.spec() == TokenSpec.ERC20) {
+        } else if (tok.spec() == TokenSpec.ERC20) {
             require(tok.id() == 0);
             return IERC20Metadata(tok.addr()).decimals();
         }
@@ -199,45 +201,18 @@ library TokenLib {
     }
 
     function toScaledBalance(Token tok, uint256 amount) internal view returns (uint256) {
-        if (block.chainid == 81457) {
-            if (tok == toToken(BLAST_USDB)) {
-                return amount * 1e9 / BLAST_USDB.price();
-            } else if (tok == NATIVE_TOKEN) {
-                return amount * 1e9 / IERC20Rebasing(0x4300000000000000000000000000000000000000).price();
-            }
-        }
         return amount;
     }
 
     function fromScaledBalance(Token tok, uint256 amount) internal view returns (uint256) {
-        if (block.chainid == 81457) {
-            if (tok == toToken(BLAST_USDB)) {
-                return amount * BLAST_USDB.price() / 1e9;
-            } else if (tok == NATIVE_TOKEN) {
-                return amount * IERC20Rebasing(0x4300000000000000000000000000000000000000).price() / 1e9;
-            }
-        }
-        return amount;
-        }
-
-    function toScaledBalance(Token tok, int128 amount) internal view returns (int128) {
-        if (block.chainid == 81457) {
-            if (tok == toToken(BLAST_USDB)) {
-                return amount * 1e9 / int128(int256(BLAST_USDB.price()));
-            } else if (tok == NATIVE_TOKEN) {
-                return amount * 1e9 / int128(int256(IERC20Rebasing(0x4300000000000000000000000000000000000000).price()));
-            }
-        }
         return amount;
     }
-    function fromScaledBalance(Token tok, int128 amount) internal view returns (int128) {
-        if (block.chainid == 81457) {
-            if (tok == toToken(BLAST_USDB)) {
-                return amount * int128(int256(BLAST_USDB.price())) / 1e9;
-            } else if (tok == NATIVE_TOKEN) {
-                return amount * int128(int256(IERC20Rebasing(0x4300000000000000000000000000000000000000).price())) / 1e9;
-            }
-        }
+
+    function toScaledBalance(Token tok, int128 amount) internal view returns (int128) {
         return amount;
-        }
+    }
+
+    function fromScaledBalance(Token tok, int128 amount) internal view returns (int128) {
+        return amount;
+    }
 }

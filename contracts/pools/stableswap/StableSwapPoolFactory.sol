@@ -58,7 +58,7 @@ contract StableSwapPoolFactory is Satellite {
 
         StableSwapPool ret = new StableSwapPool(
             vault,
-            string(abi.encodePacked("BladeSwap Stable LP: ", quoteToken.symbol(), " + ", baseToken.symbol())),
+            string(abi.encodePacked("SailSwap Stable LP: ", quoteToken.symbol(), " + ", baseToken.symbol())),
             string(abi.encodePacked(quoteToken.symbol(), "-", baseToken.symbol(), "-SLP")),
             quoteToken,
             baseToken,

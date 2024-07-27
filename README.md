@@ -1,8 +1,12 @@
-![SailFish-Transparent](https://gist.github.com/user-attachments/assets/349f7f2b-22b2-4c23-8e43-5abcf6028358)
+Official repository of SailFish, a veDEX on EDUCHAIN
 
-
-Official repository of SailFish a veDEX on EDUCHAIN
+### Features
+- 100% Protocol fess distributed to users
+- Efficient Swap Router
+- CLAMM Powered by Algebra Integra
+- Launchpad for Fair Launches on EDUCHAIN
 
 ```
 forge build
+forge test -vvvv
 ```

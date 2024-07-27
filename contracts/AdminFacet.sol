@@ -9,7 +9,6 @@ import "contracts/interfaces/IFacet.sol";
 import "contracts/VaultStorage.sol";
 import "./Diamond.sol";
 import "openzeppelin/utils/math/SafeCast.sol";
-import "contracts/blast/IBLAST.sol";
 /**
  * @dev a Facet for administrative and deployment logic.
  *
@@ -46,7 +45,6 @@ contract AdminFacet is VaultStorage, IFacet {
         require(msg.sender == deployer);
         address deployed = address(new Diamond());
         require(deployed != address(0));
-        //try BLAST.configureGovernor(deployed) {} catch (bytes memory) {}
         return deployed;
     }
 

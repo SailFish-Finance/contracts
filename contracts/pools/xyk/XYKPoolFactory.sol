@@ -58,7 +58,7 @@ contract XYKPoolFactory is Satellite {
 
         XYKPool ret = new XYKPool(
             vault,
-            string(abi.encodePacked("BladeSwap LP: ", quoteToken.symbol(), " + ", baseToken.symbol())),
+            string(abi.encodePacked("SailSwap LP: ", quoteToken.symbol(), " + ", baseToken.symbol())),
             string(abi.encodePacked(quoteToken.symbol(), "-", baseToken.symbol(), "-VLP")),
             quoteToken,
             baseToken,
