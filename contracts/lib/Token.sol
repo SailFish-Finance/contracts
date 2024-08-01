@@ -31,8 +31,8 @@ using {Token_ne as !=} for Token global;
 
 Token constant NATIVE_TOKEN =
     Token.wrap(bytes32(0xEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE) & TOKEN_MASK);
-//@Todo change this to the correct address for WEDU
-address constant WETH_ADDRESS = 0x4300000000000000000000000000000000000004;
+
+address constant WEDU_ADDRESS = 0x951764b4D04944b6F0Bd9e5D2603a27666C375d4;
 
 function TokenSpec_equals(TokenSpecType a, TokenSpecType b) pure returns (bool) {
     return TokenSpecType.unwrap(a) == TokenSpecType.unwrap(b);

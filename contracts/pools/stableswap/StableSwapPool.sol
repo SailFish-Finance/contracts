@@ -26,7 +26,6 @@ import "forge-std/console2.sol";
  * this contract is the first one. it falls back to the second one (ConstantProductLibrary) when neccesary.
  *
  */
-
 function floorDiv(int256 a, int256 b) pure returns (int256) {
     uint256 a_ = SignedMath.abs(a);
     uint256 b_ = SignedMath.abs(b);
@@ -49,6 +48,7 @@ function ceilDiv(int256 a, int256 b) pure returns (int256) {
 
 contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     error ReserveWillBecomeOutOfBound(int256 b0, int256 b1);
+
     using UncheckedMemory for uint256[];
     using UncheckedMemory for int128[];
     using UncheckedMemory for Token[];
@@ -85,12 +85,12 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     int256 logYieldEMA;
 
     function token0() external view returns (address) {
-        if (token0_ == NATIVE_TOKEN) return WETH_ADDRESS;
+        if (token0_ == NATIVE_TOKEN) return WEDU_ADDRESS;
         else return token0_.addr();
     }
 
     function token1() external view returns (address) {
-        if (token1_ == NATIVE_TOKEN) return WETH_ADDRESS;
+        if (token1_ == NATIVE_TOKEN) return WEDU_ADDRESS;
         else return token1_.addr();
     }
 
@@ -105,22 +105,14 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         emit FeeChanged(fee1e9 * uint256(1e8));
     }
 
-
     function getLogYieldEMA() external view returns (int256) {
-        int256 indexNew = ((invariant() * 1e18) / (totalSupply() + 2))
-            .toInt256();
+        int256 indexNew = ((invariant() * 1e18) / (totalSupply() + 2)).toInt256();
         if (lastTradeTimestamp != block.timestamp) {
-            int256 an = int256(
-                rpow(
-                    0.999983955055097432543272791e27,
-                    block.timestamp - lastTradeTimestamp,
-                    1e27
-                )
-            );
-            int256 logYield = (int256(
-                intoUint256(log2(ud60x18(uint256(indexNew * 1e27))))
-            ) - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))) /
-                int256(block.timestamp - lastTradeTimestamp);
+            int256 an = int256(rpow(0.999983955055097432543272791e27, block.timestamp - lastTradeTimestamp, 1e27));
+            int256 logYield = (
+                int256(intoUint256(log2(ud60x18(uint256(indexNew * 1e27)))))
+                    - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))
+            ) / int256(block.timestamp - lastTradeTimestamp);
             return (logYieldEMA * an + (1e27 - an) * logYield) / 1e27;
         }
         return logYieldEMA;
@@ -183,19 +175,14 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
 
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    function velocore__execute(
-        address user,
-        Token[] calldata t,
-        int128[] memory r,
-        bytes calldata
-    )
+    function velocore__execute(address user, Token[] calldata t, int128[] memory r, bytes calldata)
         external
         onlyVault
         returns (int128[] memory deltaGauge, int128[] memory deltaPool)
     {
         deltaGauge = new int128[](t.length);
         deltaPool = new int128[](t.length);
-        (int256 a_0, int256 a_1, ) = getReserves();
+        (int256 a_0, int256 a_1,) = getReserves();
         emit Sync(uint112(uint256(a_0)), uint112(uint256(a_1)));
         a_0 = a_0 * scale0 + 1;
         a_1 = a_1 * scale1 + 1;
@@ -206,27 +193,14 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
 
         if (!vault.emissionStarted()) {
-            int256 indexNew = ((invariant() * 1e18) / (totalSupply() + 2))
-                .toInt256();
-            if (
-                lastTradeTimestamp != block.timestamp && indexNew != lastIndex
-            ) {
-                int256 an = int256(
-                    rpow(
-                        0.999983955055097432543272791e27,
-                        block.timestamp - lastTradeTimestamp,
-                        1e27
-                    )
-                );
-                int256 logYield = (int256(
-                    intoUint256(log2(ud60x18(uint256(indexNew * 1e27))))
-                ) -
-                    int256(
-                        intoUint256(log2(ud60x18(uint256(lastIndex * 1e27))))
-                    )) / int256(block.timestamp - lastTradeTimestamp);
-                logYieldEMA =
-                    (logYieldEMA * an + (1e27 - an) * logYield) /
-                    1e27;
+            int256 indexNew = ((invariant() * 1e18) / (totalSupply() + 2)).toInt256();
+            if (lastTradeTimestamp != block.timestamp && indexNew != lastIndex) {
+                int256 an = int256(rpow(0.999983955055097432543272791e27, block.timestamp - lastTradeTimestamp, 1e27));
+                int256 logYield = (
+                    int256(intoUint256(log2(ud60x18(uint256(indexNew * 1e27)))))
+                        - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))
+                ) / int256(block.timestamp - lastTradeTimestamp);
+                logYieldEMA = (logYieldEMA * an + (1e27 - an) * logYield) / 1e27;
                 lastIndex = indexNew;
                 lastTradeTimestamp = uint32(block.timestamp);
             }
@@ -234,11 +208,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
 
         if (t.length == 3) {
-            require(
-                t.u(_3token_i_lp) == toToken(this) &&
-                    t.u(_3token_i_0) == token0_ &&
-                    t.u(_3token_i_1) == token1_
-            );
+            require(t.u(_3token_i_lp) == toToken(this) && t.u(_3token_i_0) == token0_ && t.u(_3token_i_1) == token1_);
 
             int256 r_lp = r.u(_3token_i_lp);
             int256 r_0 = r.u(_3token_i_0);
@@ -270,12 +240,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
                         scale0
                     );
                 } else {
-                    (r_0, r_1) = _exchange_from_lp(
-                        a_0,
-                        a_1,
-                        a_k,
-                        floorDiv(r_lp * index, 1e18)
-                    );
+                    (r_0, r_1) = _exchange_from_lp(a_0, a_1, a_k, floorDiv(r_lp * index, 1e18));
                     r_0 = ceilDiv(r_0, scale0);
                     r_1 = ceilDiv(r_1, scale1);
                 }
@@ -287,14 +252,8 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
                     r_1 = ((r_0 * a_1) / a_0);
                 }
                 r_lp = ceilDiv(
-                    _exchange_for_lp(
-                        a_0,
-                        a_1,
-                        a_k,
-                        r_0 * scale0,
-                        r_1 * scale1,
-                        int256(uint256(fee1e9 * feeMultiplier))
-                    ) * 1e18,
+                    _exchange_for_lp(a_0, a_1, a_k, r_0 * scale0, r_1 * scale1, int256(uint256(fee1e9 * feeMultiplier)))
+                        * 1e18,
                     index
                 );
             }
@@ -304,9 +263,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
             _handleSwap(user, a_k, r_lp, r_0, r_1);
             return (deltaGauge, deltaPool);
         } else if (t.length == 2) {
-            require(
-                (r.u(0) == type(int128).max) != (r.u(1) == type(int128).max)
-            );
+            require((r.u(0) == type(int128).max) != (r.u(1) == type(int128).max));
 
             uint256 i_lp = 2;
             uint256 i_0 = 2;
@@ -330,14 +287,8 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
 
             if (r_lp == type(int128).max) {
                 r_lp = ceilDiv(
-                    _exchange_for_lp(
-                        a_0,
-                        a_1,
-                        a_k,
-                        r_0 * scale0,
-                        r_1 * scale1,
-                        int256(uint256(fee1e9 * feeMultiplier))
-                    ) * 1e18,
+                    _exchange_for_lp(a_0, a_1, a_k, r_0 * scale0, r_1 * scale1, int256(uint256(fee1e9 * feeMultiplier)))
+                        * 1e18,
                     index
                 );
             } else if (r_1 == type(int128).max) {
@@ -420,11 +371,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     }
 
     function getReserves() public view returns (int256, int256, uint256) {
-        return (
-            _getPoolBalance(token0_).toInt256(),
-            _getPoolBalance(token1_).toInt256(),
-            block.timestamp
-        );
+        return (_getPoolBalance(token0_).toInt256(), _getPoolBalance(token1_).toInt256(), block.timestamp);
     }
 
     function _validatePoolState(int256 b0, int256 b1) public {
@@ -432,24 +379,16 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         int256 b1_scaled = b1 * scale1 + 1;
         int256 ratio = (b0_scaled * 1e18) / b1_scaled;
 
-        if (
-            ratio > 10000e18 ||
-            ratio < 0.0001e18 ||
-            b0_scaled > type(int112).max ||
-            b1_scaled > type(int112).max
-        ) {
+        if (ratio > 10000e18 || ratio < 0.0001e18 || b0_scaled > type(int112).max || b1_scaled > type(int112).max) {
             revert ReserveWillBecomeOutOfBound(b0, b1);
         }
     }
 
-    function _exchange(
-        int256 a_0,
-        int256 a_1,
-        int256 a_k,
-        int256 b_1,
-        int256 d_k,
-        int256 fee
-    ) internal view returns (int256) {
+    function _exchange(int256 a_0, int256 a_1, int256 a_k, int256 b_1, int256 d_k, int256 fee)
+        internal
+        view
+        returns (int256)
+    {
         int256 b_k = a_k - d_k;
         require(b_k >= 2);
 
@@ -462,50 +401,37 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         int256 b_0 = _y(b_k, b_1);
 
         if (a_k <= b_k) {
-            b_0 +=
-                (SignedMath.max(((a_k * b_0) / b_k) - a_0, 0) * fee) /
-                (1e18 - fee);
+            b_0 += (SignedMath.max(((a_k * b_0) / b_k) - a_0, 0) * fee) / (1e18 - fee);
         } else if (a_k > b_k) {
-            b_0 +=
-                (SignedMath.max(b_0 - ((b_k * a_0) / a_k), 0) * fee) /
-                (1e18 - fee);
+            b_0 += (SignedMath.max(b_0 - ((b_k * a_0) / a_k), 0) * fee) / (1e18 - fee);
         }
 
         return b_0 - a_0 + 1;
     }
 
-    function _exchange_for_t0(
-        int256 a_0,
-        int256 a_1,
-        int256 a_k,
-        int256 r_1,
-        int256 r_lp,
-        int256 fee
-    ) internal view returns (int256) {
+    function _exchange_for_t0(int256 a_0, int256 a_1, int256 a_k, int256 r_1, int256 r_lp, int256 fee)
+        internal
+        view
+        returns (int256)
+    {
         if (r_1 == 0 && r_lp == 0) return 0;
         return _exchange(a_0, a_1, a_k, a_1 + r_1, r_lp, fee);
     }
 
-    function _exchange_for_t1(
-        int256 a_0,
-        int256 a_1,
-        int256 a_k,
-        int256 r_0,
-        int256 r_lp,
-        int256 fee
-    ) internal view returns (int256) {
+    function _exchange_for_t1(int256 a_0, int256 a_1, int256 a_k, int256 r_0, int256 r_lp, int256 fee)
+        internal
+        view
+        returns (int256)
+    {
         if (r_0 == 0 && r_lp == 0) return 0;
         return _exchange(a_1, a_0, a_k, a_0 + r_0, r_lp, fee);
     }
 
-    function _exchange_for_lp(
-        int256 a_0,
-        int256 a_1,
-        int256 a_k,
-        int256 r_0,
-        int256 r_1,
-        int256 fee
-    ) internal view returns (int256) {
+    function _exchange_for_lp(int256 a_0, int256 a_1, int256 a_k, int256 r_0, int256 r_1, int256 fee)
+        internal
+        view
+        returns (int256)
+    {
         if (r_0 == 0 && r_0 == 0) return 0;
         int256 b_0 = a_0 + r_0;
         int256 b_1 = a_1 + r_1;
@@ -522,47 +448,33 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         return a_k - invariant(b_0, b_1);
     }
 
-    function _exchange_from_lp(
-        int256 a_0,
-        int256 a_1,
-        int256 a_k,
-        int256 r_lp
-    ) internal view returns (int256, int256) {
+    function _exchange_from_lp(int256 a_0, int256 a_1, int256 a_k, int256 r_lp)
+        internal
+        view
+        returns (int256, int256)
+    {
         if (r_lp > 0) a_k += 1;
         if (r_lp < 0) a_k -= 1;
         return (ceilDiv(-(a_0 * r_lp), a_k), ceilDiv(-(a_1 * r_lp), a_k));
     }
 
-    event Mint(address indexed sender, uint amount0, uint amount1);
-    event Burn(
-        address indexed sender,
-        uint amount0,
-        uint amount1,
-        address indexed to
-    );
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
     event Swap(
         address indexed sender,
-        uint amount0In,
-        uint amount1In,
-        uint amount0Out,
-        uint amount1Out,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
         address indexed to
     );
 
-    function _handleSwap(
-        address user,
-        int256 inv,
-        int256 rlp,
-        int256 r0,
-        int256 r1
-    ) internal {
+    function _handleSwap(address user, int256 inv, int256 rlp, int256 r0, int256 r1) internal {
         if (rlp > 0) {
             emit Burn(user, uint256(-int256(r0)), uint256(-int256(r1)), user);
             _simulateBurn(uint256(int256(rlp)));
             uint256 d = uint256((inv - int256(rlp)));
-            feeMultiplier = uint128(
-                (feeMultiplier * inv.toUint256()) / Math.max(1, d)
-            );
+            feeMultiplier = uint128((feeMultiplier * inv.toUint256()) / Math.max(1, d));
         } else if (rlp < 0) {
             emit Mint(user, uint256(int256(r0)), uint256(int256(r1)));
             _simulateMint(uint256(-int256(rlp)));
@@ -584,7 +496,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
             emit Swap(user, a0i, a1i, a0o, a1o, user);
         }
 
-        (int256 a0, int256 a1, ) = getReserves();
+        (int256 a0, int256 a1,) = getReserves();
         _validatePoolState(a0 + r0, a1 + r1);
     }
 
@@ -621,15 +533,12 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     }
 
     function invariant() public view virtual returns (uint256) {
-        (int256 a_0, int256 a_1, ) = getReserves();
+        (int256 a_0, int256 a_1,) = getReserves();
         return invariant(a_0 * scale0 + 1, a_1 * scale1 + 1).toUint256();
     }
 
     function _excessInvariant() internal view virtual returns (uint256) {
-        uint256 minted = Math.ceilDiv(
-            (2 * totalSupply()) * index.toUint256(),
-            1e18
-        );
+        uint256 minted = Math.ceilDiv((2 * totalSupply()) * index.toUint256(), 1e18);
         uint256 actual = invariant();
         return actual < minted ? 0 : actual - minted;
     }
@@ -638,7 +547,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         Token[] memory ret = new Token[](2);
         unchecked {
             ret.u(0, token0_);
-           ret.u(1, token1_);
+            ret.u(1, token1_);
         }
         return ret;
     }
@@ -652,12 +561,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         ret[0] = toToken(this);
     }
 
-    function poolParams()
-        external
-        view
-        override(IPool, Pool)
-        returns (bytes memory)
-    {
+    function poolParams() external view override(IPool, Pool) returns (bytes memory) {
         return abi.encode(fee1e9 * uint256(1e9), A);
     }
 
@@ -665,10 +569,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         return _lpDecimals;
     }
 
-    function velocore__bribe(
-        IGauge gauge,
-        uint256 elapsed
-    )
+    function velocore__bribe(IGauge gauge, uint256 elapsed)
         external
         onlyVault
         returns (
@@ -707,8 +608,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         uint256 v;
         unchecked {
             v = address(gauge) == address(this)
-                ? (_excessInvariant() * 1e18 / uint256(index) * (2 ** 32 - uint256(decayRate))) /
-                    2 ** 32
+                ? (_excessInvariant() * 1e18 / uint256(index) * (2 ** 32 - uint256(decayRate))) / 2 ** 32
                 : 0;
         }
         assembly {
@@ -719,9 +619,7 @@ contract StableSwapPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
     }
 
-    function underlyingTokens(
-        Token tok
-    ) external view returns (Token[] memory) {
+    function underlyingTokens(Token tok) external view returns (Token[] memory) {
         require(tok == toToken(this));
         return listedTokens();
     }

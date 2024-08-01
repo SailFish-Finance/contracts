@@ -7,6 +7,8 @@ via_ir = true
 optimizer = true
 optimizer-runs = 50
 
+unchecked_cheatcode_artifacts = true
+
 [rpc_endpoints]
 telos-testnet = "https://testnet.telos.net/evm"
 zeta-testnet = "https://rpc.ankr.com/zetachain_evm_athens_testnet"

@@ -25,7 +25,8 @@ contract UpgradeScript is Script {
     function setUp() public {}
 
     function run() public returns (IVault, VC, VeVC) {
-        vm.startBroadcast();
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
         //address[] memory m = new address[](1);
         //m[0] = 0x1234561fEd41DD2D867a038bBdB857f291864225;
         //TimelockController tc = new TimelockController(7 days, m, m, address(0));

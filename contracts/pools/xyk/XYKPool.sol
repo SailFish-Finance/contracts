@@ -25,7 +25,6 @@ import "contracts/pools/SingleTokenGauge.sol";
  * this contract is the first one. it falls back to the second one (ConstantProductLibrary) when neccesary.
  *
  */
-
 contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     using UncheckedMemory for uint256[];
     using UncheckedMemory for int128[];
@@ -52,36 +51,30 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     int256 public index;
     int256 lastIndex;
     int256 logYieldEMA;
-    
+
     function token0() external view returns (address) {
-        if (token0_ == NATIVE_TOKEN) return WETH_ADDRESS;
+        if (token0_ == NATIVE_TOKEN) return WEDU_ADDRESS;
         else return token0_.addr();
     }
 
     function token1() external view returns (address) {
-        if (token1_ == NATIVE_TOKEN) return WETH_ADDRESS;
+        if (token1_ == NATIVE_TOKEN) return WEDU_ADDRESS;
         else return token1_.addr();
     }
 
     function getLogYieldEMA() external view returns (int256) {
-        int256 indexNew = ((_invariant() * 1e18) / (totalSupply() + 2))
-            .toInt256();
+        int256 indexNew = ((_invariant() * 1e18) / (totalSupply() + 2)).toInt256();
         if (lastTradeTimestamp != block.timestamp) {
-            int256 an = int256(
-                rpow(
-                    0.999983955055097432543272791e27,
-                    block.timestamp - lastTradeTimestamp,
-                    1e27
-                )
-            );
-            int256 logYield = (int256(
-                intoUint256(log2(ud60x18(uint256(indexNew * 1e27))))
-            ) - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))) /
-                int256(block.timestamp - lastTradeTimestamp);
+            int256 an = int256(rpow(0.999983955055097432543272791e27, block.timestamp - lastTradeTimestamp, 1e27));
+            int256 logYield = (
+                int256(intoUint256(log2(ud60x18(uint256(indexNew * 1e27)))))
+                    - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))
+            ) / int256(block.timestamp - lastTradeTimestamp);
             return (logYieldEMA * an + (1e27 - an) * logYield) / 1e27;
         }
         return logYieldEMA;
     }
+
     function floorDiv(int256 a, int256 b) internal pure returns (int256) {
         uint256 a_ = SignedMath.abs(a);
         uint256 b_ = SignedMath.abs(b);
@@ -160,19 +153,14 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
 
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    function velocore__execute(
-        address user,
-        Token[] calldata t,
-        int128[] memory r,
-        bytes calldata
-    )
+    function velocore__execute(address user, Token[] calldata t, int128[] memory r, bytes calldata)
         external
         onlyVault
         returns (int128[] memory deltaGauge, int128[] memory deltaPool)
     {
         deltaGauge = new int128[](t.length);
         deltaPool = new int128[](t.length);
-        (int256 a_0, int256 a_1, ) = getReserves();
+        (int256 a_0, int256 a_1,) = getReserves();
         emit Sync(uint112(uint256(a_0)), uint112(uint256(a_1)));
         a_0 += 1;
         a_1 += 1;
@@ -182,27 +170,14 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
 
         if (!vault.emissionStarted()) {
-            int256 indexNew = ((_invariant() * 1e18) / (totalSupply() + 1))
-                .toInt256();
-            if (
-                lastTradeTimestamp != block.timestamp && lastIndex != indexNew
-            ) {
-                int256 an = int256(
-                    rpow(
-                        0.999983955055097432543272791e27,
-                        block.timestamp - lastTradeTimestamp,
-                        1e27
-                    )
-                );
-                int256 logYield = (int256(
-                    intoUint256(log2(ud60x18(uint256(indexNew * 1e27))))
-                ) -
-                    int256(
-                        intoUint256(log2(ud60x18(uint256(lastIndex * 1e27))))
-                    )) / int256(block.timestamp - lastTradeTimestamp);
-                logYieldEMA =
-                    (logYieldEMA * an + (1e27 - an) * logYield) /
-                    1e27;
+            int256 indexNew = ((_invariant() * 1e18) / (totalSupply() + 1)).toInt256();
+            if (lastTradeTimestamp != block.timestamp && lastIndex != indexNew) {
+                int256 an = int256(rpow(0.999983955055097432543272791e27, block.timestamp - lastTradeTimestamp, 1e27));
+                int256 logYield = (
+                    int256(intoUint256(log2(ud60x18(uint256(indexNew * 1e27)))))
+                        - int256(intoUint256(log2(ud60x18(uint256(lastIndex * 1e27)))))
+                ) / int256(block.timestamp - lastTradeTimestamp);
+                logYieldEMA = (logYieldEMA * an + (1e27 - an) * logYield) / 1e27;
                 lastIndex = indexNew;
                 lastTradeTimestamp = uint32(block.timestamp);
             }
@@ -210,11 +185,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
 
         if (t.length == 3) {
-            require(
-                t.u(_3token_i_lp) == toToken(this) &&
-                    t.u(_3token_i_0) == token0_ &&
-                    t.u(_3token_i_1) == token1_
-            );
+            require(t.u(_3token_i_lp) == toToken(this) && t.u(_3token_i_0) == token0_ && t.u(_3token_i_1) == token1_);
 
             int256 r_lp = r.u(_3token_i_lp);
             int256 r_0 = r.u(_3token_i_0);
@@ -223,26 +194,14 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
             if (r_lp != type(int128).max) {
                 if (r_0 != type(int128).max) {
                     r_1 = _exchange_for_t1(
-                        a_0,
-                        a_1,
-                        r_0,
-                        floorDiv(r_lp * index, 1e18),
-                        int256(uint256(fee1e9 * feeMultiplier))
+                        a_0, a_1, r_0, floorDiv(r_lp * index, 1e18), int256(uint256(fee1e9 * feeMultiplier))
                     );
                 } else if (r_1 != type(int128).max) {
                     r_0 = _exchange_for_t0(
-                        a_0,
-                        a_1,
-                        r_1,
-                        floorDiv(r_lp * index, 1e18),
-                        int256(uint256(fee1e9 * feeMultiplier))
+                        a_0, a_1, r_1, floorDiv(r_lp * index, 1e18), int256(uint256(fee1e9 * feeMultiplier))
                     );
                 } else {
-                    (r_0, r_1) = _exchange_from_lp(
-                        a_0,
-                        a_1,
-                        floorDiv(r_lp * index, 1e18)
-                    );
+                    (r_0, r_1) = _exchange_from_lp(a_0, a_1, floorDiv(r_lp * index, 1e18));
                 }
             } else {
                 require(r_0 != type(int128).max || r_1 != type(int128).max);
@@ -251,16 +210,8 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
                 } else if (r_1 == type(int128).max) {
                     r_1 = (r_0 * (a_1)) / (a_0);
                 }
-                r_lp = ceilDiv(
-                    _exchange_for_lp(
-                        a_0,
-                        a_1,
-                        r_0,
-                        r_1,
-                        int256(uint256(fee1e9 * feeMultiplier))
-                    ) * 1e18,
-                    index
-                );
+                r_lp =
+                    ceilDiv(_exchange_for_lp(a_0, a_1, r_0, r_1, int256(uint256(fee1e9 * feeMultiplier))) * 1e18, index);
             }
             deltaPool.u(_3token_i_0, r_0.toInt128());
             deltaPool.u(_3token_i_1, r_1.toInt128());
@@ -268,9 +219,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
             _handleSwap(user, r_lp, r_0, r_1);
             return (deltaGauge, deltaPool);
         } else if (t.length == 2) {
-            require(
-                (r.u(0) == type(int128).max) != (r.u(1) == type(int128).max)
-            );
+            require((r.u(0) == type(int128).max) != (r.u(1) == type(int128).max));
 
             uint256 i_lp = 2;
             uint256 i_0 = 2;
@@ -293,31 +242,15 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
             int256 r_1 = i_1 == 2 ? int256(0) : r.u(i_1);
 
             if (r_lp == type(int128).max) {
-                r_lp = ceilDiv(
-                    _exchange_for_lp(
-                        a_0,
-                        a_1,
-                        r_0,
-                        r_1,
-                        int256(uint256(fee1e9 * feeMultiplier))
-                    ) * 1e18,
-                    index
-                );
+                r_lp =
+                    ceilDiv(_exchange_for_lp(a_0, a_1, r_0, r_1, int256(uint256(fee1e9 * feeMultiplier))) * 1e18, index);
             } else if (r_1 == type(int128).max) {
                 r_1 = _exchange_for_t1(
-                    a_0,
-                    a_1,
-                    r_0,
-                    floorDiv(r_lp * index, 1e18),
-                    int256(uint256(fee1e9 * feeMultiplier))
+                    a_0, a_1, r_0, floorDiv(r_lp * index, 1e18), int256(uint256(fee1e9 * feeMultiplier))
                 );
             } else {
                 r_0 = _exchange_for_t0(
-                    a_0,
-                    a_1,
-                    r_1,
-                    floorDiv(r_lp * index, 1e18),
-                    int256(uint256(fee1e9 * feeMultiplier))
+                    a_0, a_1, r_1, floorDiv(r_lp * index, 1e18), int256(uint256(fee1e9 * feeMultiplier))
                 );
             }
 
@@ -347,23 +280,11 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     }
 
     function getReserves() public view returns (int256, int256, uint256) {
-        return (
-            _getPoolBalance(token0_).toInt256(),
-            _getPoolBalance(token1_).toInt256(),
-            block.timestamp
-        );
+        return (_getPoolBalance(token0_).toInt256(), _getPoolBalance(token1_).toInt256(), block.timestamp);
     }
 
-    function _exchange(
-        int256 a_0,
-        int256 a_1,
-        int256 b_1,
-        int256 d_k,
-        int256 fee
-    ) internal returns (int256) {
-        int256 a_k = Math
-            .sqrt((a_0.toUint256()) * (a_1.toUint256()), Math.Rounding.Up)
-            .toInt256();
+    function _exchange(int256 a_0, int256 a_1, int256 b_1, int256 d_k, int256 fee) internal returns (int256) {
+        int256 a_k = Math.sqrt((a_0.toUint256()) * (a_1.toUint256()), Math.Rounding.Up).toInt256();
         int256 b_k = a_k - d_k;
         require(b_k > 0);
 
@@ -376,51 +297,27 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         int256 b_0 = ceilDiv(b_k ** 2, b_1);
 
         if (a_k <= b_k) {
-            b_0 +=
-                (SignedMath.max(((a_k * b_0) / b_k) - a_0, 0) * fee) /
-                (1e18 - fee);
+            b_0 += (SignedMath.max(((a_k * b_0) / b_k) - a_0, 0) * fee) / (1e18 - fee);
         } else if (a_k > b_k) {
-            b_0 +=
-                (SignedMath.max(b_0 - ((b_k * a_0) / a_k), 0) * fee) /
-                (1e18 - fee);
+            b_0 += (SignedMath.max(b_0 - ((b_k * a_0) / a_k), 0) * fee) / (1e18 - fee);
         }
 
         return b_0 - a_0;
     }
 
-    function _exchange_for_t0(
-        int256 a_0,
-        int256 a_1,
-        int256 r_1,
-        int256 r_lp,
-        int256 fee
-    ) internal returns (int256) {
+    function _exchange_for_t0(int256 a_0, int256 a_1, int256 r_1, int256 r_lp, int256 fee) internal returns (int256) {
         return _exchange(a_0, a_1, a_1 + r_1, r_lp, fee);
     }
 
-    function _exchange_for_t1(
-        int256 a_0,
-        int256 a_1,
-        int256 r_0,
-        int256 r_lp,
-        int256 fee
-    ) internal returns (int256) {
+    function _exchange_for_t1(int256 a_0, int256 a_1, int256 r_0, int256 r_lp, int256 fee) internal returns (int256) {
         return _exchange(a_1, a_0, a_0 + r_0, r_lp, fee);
     }
 
-    function _exchange_for_lp(
-        int256 a_0,
-        int256 a_1,
-        int256 r_0,
-        int256 r_1,
-        int256 fee
-    ) internal returns (int256) {
+    function _exchange_for_lp(int256 a_0, int256 a_1, int256 r_0, int256 r_1, int256 fee) internal returns (int256) {
         int256 b_0 = a_0 + r_0;
         int256 b_1 = a_1 + r_1;
 
-        int256 a_k = Math
-            .sqrt((a_0 * a_1).toUint256(), Math.Rounding.Up)
-            .toInt256();
+        int256 a_k = Math.sqrt((a_0 * a_1).toUint256(), Math.Rounding.Up).toInt256();
         int256 b_k = invariant(b_0, b_1);
 
         if (a_k <= b_k) {
@@ -433,40 +330,24 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         return a_k - invariant(b_0, b_1);
     }
 
-    function _exchange_from_lp(
-        int256 a_0,
-        int256 a_1,
-        int256 r_lp
-    ) internal returns (int256, int256) {
+    function _exchange_from_lp(int256 a_0, int256 a_1, int256 r_lp) internal returns (int256, int256) {
         Math.Rounding r = r_lp > 0 ? Math.Rounding.Up : Math.Rounding.Down;
-        int256 inv = Math
-            .sqrt((a_0.toUint256()) * (a_1.toUint256()), r)
-            .toInt256();
+        int256 inv = Math.sqrt((a_0.toUint256()) * (a_1.toUint256()), r).toInt256();
         return (ceilDiv(-((a_0) * r_lp), inv), ceilDiv(-((a_1) * r_lp), inv));
     }
 
-    event Mint(address indexed sender, uint amount0, uint amount1);
-    event Burn(
-        address indexed sender,
-        uint amount0,
-        uint amount1,
-        address indexed to
-    );
+    event Mint(address indexed sender, uint256 amount0, uint256 amount1);
+    event Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to);
     event Swap(
         address indexed sender,
-        uint amount0In,
-        uint amount1In,
-        uint amount0Out,
-        uint amount1Out,
+        uint256 amount0In,
+        uint256 amount1In,
+        uint256 amount0Out,
+        uint256 amount1Out,
         address indexed to
     );
 
-    function _handleSwap(
-        address user,
-        int256 rlp,
-        int256 r0,
-        int256 r1
-    ) internal {
+    function _handleSwap(address user, int256 rlp, int256 r0, int256 r1) internal {
         if (rlp > 0) {
             emit Burn(user, uint256(-int256(r0)), uint256(-int256(r1)), user);
             _simulateBurn(uint256(int256(rlp)));
@@ -520,16 +401,13 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
     }
 
     function _invariant() internal view virtual returns (uint256) {
-        (int256 a_0, int256 a_1, ) = getReserves();
+        (int256 a_0, int256 a_1,) = getReserves();
         return invariant(a_0 + 1, a_1 + 1).toUint256();
     }
 
     function _excessInvariant() internal view virtual returns (uint256) {
-        uint256 minted = Math.ceilDiv(
-            (totalSupply() + 1) * index.toUint256(),
-            1e18
-        );
-        (int256 a_0, int256 a_1, ) = getReserves();
+        uint256 minted = Math.ceilDiv((totalSupply() + 1) * index.toUint256(), 1e18);
+        (int256 a_0, int256 a_1,) = getReserves();
         uint256 actual = _invariant();
         return actual < minted ? 0 : actual - minted;
     }
@@ -552,12 +430,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         ret[0] = toToken(this);
     }
 
-    function poolParams()
-        external
-        view
-        override(IPool, Pool)
-        returns (bytes memory)
-    {
+    function poolParams() external view override(IPool, Pool) returns (bytes memory) {
         uint256[] memory r = new uint256[](2);
         r[0] = 1;
         r[1] = 1;
@@ -568,10 +441,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         return _lpDecimals;
     }
 
-    function velocore__bribe(
-        IGauge gauge,
-        uint256 elapsed
-    )
+    function velocore__bribe(IGauge gauge, uint256 elapsed)
         external
         onlyVault
         returns (
@@ -611,8 +481,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         uint256 v;
         unchecked {
             v = address(gauge) == address(this)
-                ? (_excessInvariant() * 1e18 / uint256(index) * (2 ** 32 - uint256(decayRate))) /
-                    2 ** 32
+                ? (_excessInvariant() * 1e18 / uint256(index) * (2 ** 32 - uint256(decayRate))) / 2 ** 32
                 : 0;
         }
         assembly {
@@ -623,9 +492,7 @@ contract XYKPool is SingleTokenGauge, PoolWithLPToken, ISwap, IBribe {
         }
     }
 
-    function underlyingTokens(
-        Token tok
-    ) external view returns (Token[] memory) {
+    function underlyingTokens(Token tok) external view returns (Token[] memory) {
         require(tok == toToken(this));
         return listedTokens();
     }
