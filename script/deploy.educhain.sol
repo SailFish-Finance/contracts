@@ -6,7 +6,7 @@ import "openzeppelin/proxy/ERC1967/ERC1967Upgrade.sol";
 import "contracts/AdminFacet.sol";
 import "contracts/SwapFacet.sol";
 import "contracts/SwapAuxillaryFacet.sol";
-import "contracts/pools/vc/SAIL.sol";
+import "contracts/pools/vc/SAILV2.sol";
 import "contracts/pools/vc/veSAIL.sol";
 import "contracts/pools/converter/WETHConverter.sol";
 import "contracts/pools/wombat/WombatPool.sol";
@@ -23,6 +23,7 @@ import "contracts/pools/linear-bribe/LinearBribeFactory.sol";
 import "contracts/authorizer/SimpleAuthorizer.sol";
 import "contracts/MockERC20.sol";
 import "openzeppelin/token/ERC20/IERC20.sol";
+import "contracts/SwapHelperFacet2.sol";
 
 contract Placeholder is ERC1967Upgrade {
     address immutable admin;
@@ -121,10 +122,15 @@ contract DeployScript is Script {
 
         vault.admin_addFacet(new SwapFacet(vc, IWETH(wedu), toToken(veVC)));
         vault.admin_addFacet(new SwapAuxillaryFacet(vc, toToken(veVC)));
+
         vault.admin_addFacet(new NFTHolderFacet());
         vault.admin_addFacet(new InspectorFacet());
-        vault.admin_addFacet(new SwapHelperFacet(address(vc), cpf, spf));
-        vault.admin_addFacet(new SwapHelperFacet2(address(vc), cpf, spf));
+
+        SwapHelperFacet swapHelperFaucet = new SwapHelperFacet(address(vc), cpf, spf);
+        vault.admin_addFacet(swapHelperFaucet);
+
+        SwapHelperFacet2 swapHelperFacet2 = new SwapHelperFacet2(address(vc), cpf, spf);
+        vault.admin_addFacet(swapHelperFacet2);
 
         Placeholder(address(vc)).upgradeToAndCall(
             address(new Sail(address(vc), vault, address(veVC))), abi.encodeWithSelector(Sail.initialize.selector)
@@ -134,27 +140,36 @@ contract DeployScript is Script {
             address(new VeSail(address(veVC), vault, vc)), abi.encodeWithSelector(VeSail.initialize.selector)
         );
 
-        // EDU_USDC = MockERC20(0x43b44e462e45A07382A5DF9D22e23fd10cEC69dc);
         XYKPool edu_vc_lp = cpf.deploy(NATIVE_TOKEN, toToken(vc));
-        XYKPool edu_usdc_lp = cpf.deploy(NATIVE_TOKEN, toToken(IERC20(0x43b44e462e45A07382A5DF9D22e23fd10cEC69dc)));
-        // StableSwapPool vc_vevc_lp = spf.deploy(toToken(vc), toToken(veVC));
+        XYKPool usdc_vc_lp = cpf.deploy(toToken(vc), toToken(IERC20(0x128462fB43b1219Ab9B25C56CF05c87695d5a32a)));
 
-        // vault.execute1(address(vc), 0, address(vc), 0, 0, "");
+        vc.approve(address(vault), 1000 ether);
+        swapHelperFacet2.addLiquidity{value: 0.01 ether}(
+            address(0),
+            address(vc),
+            false,
+            0.01 ether,
+            100 ether,
+            0,
+            0,
+            deployerAddress,
+            115792089237316195423570985008687907853269984665640564039457584007913129639935
+        );
 
-        // vc.approve(eduDeployer, type(uint256).max);
-        // veVC.approve(eduDeployer, type(uint256).max);
-        // EDU_USDC.approve(eduDeployer, type(uint256).max);
+        // Add liquidity to the edu_vc_lp
+        swapHelperFacet2.addLiquidity(
+            address(IERC20(0xD976B41CD9829e7e8bb5aECE5271D10033910eC9)),
+            address(vc),
+            false,
+            1 ether,
+            1 ether,
+            0,
+            0,
+            deployerAddress,
+            115792089237316195423570985008687907853269984665640564039457584007913129639935
+        );
 
-        // SwapHelperFacet2(address(vault)).addLiquidity{value: 1e18}(
-        //     address(0), address(vc), false, 1e18, 10000e18, 0, 0, deployerAddress, type(uint256).max
-        // );
-        // SwapHelperFacet2(address(vault)).addLiquidity{value: 1e18}(
-        //     address(EDU_USDC), address(0), false, 10000e18, 1e18, 0, 0, deployerAddress, type(uint256).max
-        // );
-        // SwapHelperFacet2(address(vault)).addLiquidity(
-        //     address(veVC), address(vc), true, 10000e18, 10000e18, 0, 0, deployerAddress, type(uint256).max
-        // );
-        // SwapHelperFacet2(address(vault)).addLiquidity(address(EDU_USDC), address(crvUSD), true, 10000e18, 10000e18, 0, 0, deployerAddress, type(uint256).max);
+        vault.execute1(address(vc), 0, address(vc), 0, 0, "");
 
         vm.stopBroadcast();
         console.log("authorizer: %s", address(auth));
@@ -168,10 +183,8 @@ contract DeployScript is Script {
         console.log("LinearBribeFactory: %s", address(lbf));
         console.log("WEDU: %s", address(wedu));
         console.log("WEDUConverter: %s", address(wethConverter));
-
-        console.log("EDU_VC_LP: %s", address(edu_vc_lp));
-        // console.log("EDU_USDC_LP: %s", address(edu_usdc_lp));
-        console.log("VC_VEVC_LP: %s", address(vc_vevc_lp));
+        console.log("edu_vc_lp: %s", address(edu_vc_lp));
+        console.log("usdc_vc_lp: %s", address(usdc_vc_lp));
     }
 
     function placeholder() internal returns (address) {
