@@ -140,36 +140,25 @@ contract DeployScript is Script {
             address(new VeSail(address(veVC), vault, vc)), abi.encodeWithSelector(VeSail.initialize.selector)
         );
 
+        IERC20 usdc = IERC20(0x128462fB43b1219Ab9B25C56CF05c87695d5a32a);
+
         XYKPool edu_vc_lp = cpf.deploy(NATIVE_TOKEN, toToken(vc));
-        XYKPool usdc_vc_lp = cpf.deploy(toToken(vc), toToken(IERC20(0x128462fB43b1219Ab9B25C56CF05c87695d5a32a)));
+        XYKPool usdc_vc_lp = cpf.deploy(toToken(vc), toToken(usdc));
 
-        vc.approve(address(vault), 1000 ether);
-        swapHelperFacet2.addLiquidity{value: 0.01 ether}(
-            address(0),
-            address(vc),
-            false,
-            0.01 ether,
-            100 ether,
-            0,
-            0,
-            deployerAddress,
-            115792089237316195423570985008687907853269984665640564039457584007913129639935
-        );
-
-        // Add liquidity to the edu_vc_lp
-        swapHelperFacet2.addLiquidity(
-            address(IERC20(0xD976B41CD9829e7e8bb5aECE5271D10033910eC9)),
-            address(vc),
-            false,
-            1 ether,
-            1 ether,
-            0,
-            0,
-            deployerAddress,
-            115792089237316195423570985008687907853269984665640564039457584007913129639935
-        );
+        vc.approve(address(vault), 110_000 ether);
+        usdc.approve(address(vault), 10_000 ether);
 
         vault.execute1(address(vc), 0, address(vc), 0, 0, "");
+
+        // Add liquidity to the edu_vc_lp
+        SwapHelperFacet2(address(vault)).addLiquidity{value: 0.1 ether}(
+            address(0), address(vc), false, 0.1 ether, 10_000 ether, 0, 0, deployerAddress, type(uint256).max
+        );
+
+        // Add liquidity to the usdc_vc_lp
+        SwapHelperFacet2(address(vault)).addLiquidity(
+            address(usdc), address(vc), false, 10_000 ether, 100_000 ether, 0, 0, deployerAddress, type(uint256).max
+        );
 
         vm.stopBroadcast();
         console.log("authorizer: %s", address(auth));
