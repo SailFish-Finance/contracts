@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
 import "contracts/SwapHelperFacet2.sol";
+import "contracts/lib/Token.sol";
+import "contracts/pools/xyk/XYKPoolFactory.sol";
 
 //Deployed on Blast Sepolia
 contract DeployLiq is Script {
@@ -12,13 +14,12 @@ contract DeployLiq is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
 
-        address deployer = 0x83E46e6E193B284d26f7A4B7D865B65952A50Bf2;
-        address vc = 0x9902378119Ff0cd344381208215cDcC6304af580;
-        address usdc = 0x128462fB43b1219Ab9B25C56CF05c87695d5a32a;
+        IERC20 usdc = IERC20(0x128462fB43b1219Ab9B25C56CF05c87695d5a32a);
 
-        SwapHelperFacet2 shf2 = SwapHelperFacet2(0xDfaa1F83Cd9657f4C12741B47c15C573867C30F0);
+        XYKPool edu_usdc_lp =
+            XYKPoolFactory(0x86367e107aff49caB76593Be65242A0b1a803901).deploy(NATIVE_TOKEN, toToken(usdc));
 
-        shf2.addLiquidity(usdc, vc, false, 1 ether, 1 ether, 0, 0, deployer, block.timestamp + 1000000000);
+        console.log("edu_usdc_lp: %s", address(edu_usdc_lp));
 
         vm.stopBroadcast();
     }

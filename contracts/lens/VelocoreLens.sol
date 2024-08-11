@@ -3,7 +3,7 @@ import "contracts/lib/PoolBalanceLib.sol";
 import "contracts/pools/Pool.sol";
 import "contracts/pools/xyk/XYKPoolFactory.sol";
 import "contracts/pools/stableswap/StableSwapPoolFactory.sol";
-import "contracts/pools/vc/VC.sol";
+import "contracts/pools/vc/SAILV2.sol";
 import "contracts/VaultStorage.sol";
 
 interface XYKB2 {

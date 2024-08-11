@@ -140,7 +140,7 @@ contract DeployScript is Script {
             address(new VeSail(address(veVC), vault, vc)), abi.encodeWithSelector(VeSail.initialize.selector)
         );
 
-        IERC20 usdc = IERC20(0x128462fB43b1219Ab9B25C56CF05c87695d5a32a);
+        IERC20 usdc = IERC20(0x77721D19BDfc67fe8cc46ddaa3cc4C94e6826E3C);
 
         XYKPool edu_vc_lp = cpf.deploy(NATIVE_TOKEN, toToken(vc));
         XYKPool usdc_vc_lp = cpf.deploy(toToken(vc), toToken(usdc));

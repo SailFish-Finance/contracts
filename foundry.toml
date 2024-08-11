@@ -5,7 +5,10 @@ libs = ["lib"]
 solc-version = "0.8.19"
 via_ir = true
 optimizer = true
-optimizer-runs = 50
+optimizer-runs = 10
+
+[profile.lite]
+optimizer = false
 
 unchecked_cheatcode_artifacts = true
 
@@ -23,5 +26,9 @@ scroll-sepolia = "https://sepolia-rpc.scroll.io/"
 ethereum = "https://rpc.ankr.com/eth"
 nova = "https://arbitrum-nova.blockpi.network/v1/rpc/public"
 telos = "https://mainnet.telos.net/evm"
-educhain = "https://open-campus-codex-sepolia.drpc.org"
+educhain = "https://rpc.open-campus-codex.gelato.digital/"
+educhain_old = "https://open-campus-codex-sepolia.drpc.org"
 blast-sepolia = "https://sepolia.blast.io"
+
+[etherscan]
+blast-sepolia = { key = "XXX", url = "https://opencampus-codex.blockscout.com/api" }
